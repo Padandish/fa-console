@@ -92,11 +92,12 @@ downstream tools receive standards-compliant UTF-8.
 Scope and limitations
 ---------------------
 
-* The visual transform targets classic ``conhost``. Windows Terminal
-  (``WT_SESSION``) and VS Code-style terminals (``TERM_PROGRAM``) render
-  Arabic correctly by themselves; the module detects them and steps
-  aside. Escape hatches: ``FA_CONSOLE_FORCE_VISUAL=1`` forces the
-  transform on, ``FA_CONSOLE_NO_VISUAL=1`` forces it off.
+* The visual transform targets the classic console host (``conhost``) and
+  the VS Code integrated terminal — xterm.js has no reliable bidirectional
+  reordering, so logical Persian renders disconnected/backwards there.
+  Windows Terminal (``WT_SESSION``) shapes and reorders Arabic natively
+  and is left untouched. Escape hatches: ``FA_CONSOLE_FORCE_VISUAL=1``
+  forces the transform on, ``FA_CONSOLE_NO_VISUAL=1`` forces it off.
 * The live-typing editor mirrors built-in ``input()`` semantics
   (``KeyboardInterrupt`` on Ctrl+C, ``EOFError`` on Ctrl+Z) but provides
   no history or cursor movement; arrow keys are consumed and ignored.
@@ -479,11 +480,21 @@ def _reconfigure_stream(name: str) -> bool:
 
 def _modern_terminal() -> bool:
     """
-    ``True`` for terminals that shape and reorder Arabic text natively
-    (Windows Terminal, VS Code-style terminals). The visual transform
-    stays off there to avoid double processing.
+    ``True`` for terminals that shape and reorder Arabic text natively and
+    reliably — Windows Terminal (``WT_SESSION``) and other ``TERM_PROGRAM``
+    hosts (mintty, etc.).
+
+    Note:
+        VS Code's integrated terminal (``TERM_PROGRAM=vscode``, powered by
+        xterm.js) deliberately does **not** count as modern: xterm.js lacks
+        reliable bidirectional reordering for RTL text, so logical Persian
+        appears disconnected/backwards there. The visual transform is
+        therefore applied inside VS Code as well.
     """
-    return bool(os.environ.get("WT_SESSION") or os.environ.get("TERM_PROGRAM"))
+    if os.environ.get("WT_SESSION"):
+        return True
+    term_program = os.environ.get("TERM_PROGRAM")
+    return bool(term_program) and term_program != "vscode"
 
 
 # --------------------------------------------------------------------------- #
@@ -1071,6 +1082,7 @@ def get_console_info() -> dict[str, Any]:
         "stdout_isatty": _stream_isatty(sys.stdout),
         "console_codepage": _get_console_output_codepage(),
         "modern_terminal": _modern_terminal(),
+        "term_program": os.environ.get("TERM_PROGRAM"),
         "visual_mode": _visual_mode,
         "bidi_backend": _transformer.backend_name if _visual_mode else "none",
         "force_visual_env": bool(os.environ.get(ENV_FORCE_VISUAL)),

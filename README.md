@@ -50,9 +50,10 @@ It fixes both independent layers of the problem:
 - ✅ **Live-typing echo** — `fa_input()` renders letters joined and right-to-left
   *while you type*, with built-in-`input()`-compatible semantics
   (`KeyboardInterrupt` / `EOFError`)
-- ✅ **Smart detection** — Windows Terminal, VS Code-style terminals, IDEs and
-  redirected files/pipes are detected and left untouched (standard text flows
-  there, as it should)
+- ✅ **Smart detection** — Windows Terminal and redirected files/pipes are
+  left untouched; the VS Code integrated terminal gets the same visual
+  transform as the classic console (its xterm.js engine lacks reliable
+  bidi reordering)
 - ✅ **Fail-open design** — the module never crashes the host application; every
   internal failure is logged through the `fa_console` logger and degrades
   gracefully to standard Python behaviour
@@ -138,7 +139,8 @@ terminal type, active bidi backend and a rendered sample.
 |-------------|-----------|
 | `cmd.exe` / standalone PowerShell (conhost) | Encoding fixed + visual transform + live typing echo |
 | Windows Terminal | Encoding fixed; native rendering (module steps aside) |
-| VS Code / JetBrains / IDLE consoles | Encoding fixed; module steps aside |
+| VS Code integrated terminal | Encoding fixed + visual transform (xterm.js has no reliable bidi) |
+| JetBrains / IDLE consoles | Encoding fixed; module steps aside (non-tty) |
 | Output redirected to file / pipe | Standard logical UTF-8 — safe for other tools |
 | Linux / macOS | Safe no-op (standard behaviour) |
 
@@ -151,6 +153,10 @@ terminal type, active bidi backend and a rendered sample.
   — the module detects it and lets it do the shaping.
 - **Does the transform corrupt my data?** No — it is display-only. Values,
   comparisons and files always hold logical text.
+- **Persian looks wrong in the VS Code terminal.** That is an xterm.js
+  limitation — this package compensates automatically by applying the same
+  visual transform used for the classic console (see
+  `FA_CONSOLE_NO_VISUAL=1` if you ever need to switch it off).
 - **Other RTL languages?** The shaping tables cover Arabic and Persian letters;
   the engine is language-agnostic for the letters it knows.
 
