@@ -13,7 +13,10 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
-  workflow_dispatch: {}   # allows manual runs from the Actions tab
+  push:
+    tags:
+      - "v*"                 # a plain `git push origin v2.0.0` triggers the publish
+  workflow_dispatch: {}      # allows manual runs from the Actions tab
 
 jobs:
   publish:
