@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fa-console"
-version = "2.0.0"
+version = "2.0.1"
 description = "Correct Persian (Farsi) console input/output for Python on Windows: automatic UTF-8 setup plus visual letter shaping and bidi for the classic console."
 readme = "README.md"
 requires-python = ">=3.8"
