@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fa-console"
+version = "2.0.0"
+description = "Correct Persian (Farsi) console input/output for Python on Windows: automatic UTF-8 setup plus visual letter shaping and bidi for the classic console."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+    { name = "Alireza Hosseini", email = "alireza.hosseini@hotmail.com" },
+]
+keywords = [
+    "persian", "farsi", "console", "terminal", "windows", "unicode",
+    "utf-8", "bidi", "rtl", "arabic", "reshaper", "cmd", "codepage",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Internationalization",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Terminals",
+]
+
+# The module is a single self-contained file with no required dependencies.
+dependencies = []
+
+[project.optional-dependencies]
+# Higher-fidelity bidi/shaping backend (auto-detected at runtime if present).
+high-fidelity = [
+    "arabic-reshaper>=3.0",
+    "python-bidi>=0.4.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/Padandish/fa-console"
+Repository = "https://github.com/Padandish/fa-console"
+Issues = "https://github.com/Padandish/fa-console/issues"
+"Tech Channel (Bale)" = "https://ble.ir/TechInsightsHub"
+"Tech Channel (Eitaa)" = "https://eitaa.com/TechInsightsHub"
+"Video Tutorials (Aparat)" = "https://aparat.com/TechInsightsHub"
+
+[tool.setuptools]
+# Flat layout: publish the single module without restructuring the folder.
+py-modules = ["fa_console"]

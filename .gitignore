@@ -1,0 +1,21 @@
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Demo artifacts
+demo_roundtrip.txt
+
+# Local archives — never publish
+*.rar
+
+# Tooling
+.pytest_cache/
+.mypy_cache/
+.mimosa/
