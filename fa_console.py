@@ -138,7 +138,7 @@ from typing import Any, Iterator
 
 __author__ = "Alireza Hosseini"
 __email__ = "alireza.hosseini@hotmail.com"
-__version__ = "2.0.0"
+__version__ = "2.0.2"
 
 __all__ = [
     "FaConsoleError",
