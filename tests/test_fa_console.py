@@ -9,6 +9,8 @@ pins the dependency-free backend so results are identical on machines
 that also have ``arabic-reshaper``/``python-bidi`` installed.
 """
 
+from __future__ import annotations   # keep list[str] hints valid on Python 3.8
+
 import io
 import os
 
