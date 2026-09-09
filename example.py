@@ -18,7 +18,7 @@ import fa_console  # one import does all the configuration
 
 # ------------------------------------------------------------------ output
 fa_console.fa_print("سلام دنیا! این متن حتی در cmd کلاسیک هم درست دیده می‌شود.")
-print("متن مخلوط: سال ۱۴۰۵ — نسخه 2.0 — 100% آماده")  # plain print works too
+print("متن مخلوط: سال ۱۴۰۵ — نسخه 2.1 — 100% آماده")  # plain print works too
 
 # ------------------------------------------------------- environment probe
 info = fa_console.get_console_info()
@@ -35,6 +35,16 @@ print()
 fa_console.fa_print(f"سلام، {name} جان! خوش آمدی.")
 fa_console.fa_print(f"طول نام شما: {len(name)} کاراکتر")
 fa_console.fa_print("حروف نام شما: " + " · ".join(name))
+print()
+
+# ------------------------------------------------ Arabic vs Persian keyboards
+# An Arabic keyboard layout types ي (U+064A) / ك (U+0643) where a Persian
+# layout types ی (U+06CC) / ک (U+06A9). Both render correctly; fa_normalize
+# folds them so comparisons and storage match across layouts. Digits can be
+# unified too: ASCII (0-9), Arabic-Indic (٠-٩) or Persian (۰-۹).
+mixed = "كتاب يخ — سال ٢٠٢٦"  # as if typed on an Arabic layout
+fa_console.fa_print(f"ورودی با چیدمان عربی : {mixed}")
+fa_console.fa_print(f"پس از normalize       : {fa_console.fa_normalize(mixed, digits='persian')}")
 print()
 
 # ------------------------------------------------------ data stays logical

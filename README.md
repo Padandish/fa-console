@@ -54,6 +54,10 @@ It fixes both independent layers of the problem:
   left untouched; the VS Code integrated terminal gets the same visual
   transform as the classic console (its xterm.js engine lacks reliable
   bidi reordering)
+- ✅ **Arabic-layout-safe** — letters typed with an Arabic keyboard layout
+  (ي / ك), Persian / Arabic-Indic / ASCII digit styles and numeric
+  separators (٫ ٬ . ,) are all handled by the transform; `fa_normalize()`
+  can fold them for comparison and storage
 - ✅ **Fail-open design** — the module never crashes the host application; every
   internal failure is logged through the `fa_console` logger and degrades
   gracefully to standard Python behaviour
@@ -88,13 +92,47 @@ The value returned by `input()` / `fa_input()` is always **logical-order**
 Unicode: comparisons, `len()`, slicing, regexes and file writes all see plain,
 correct Persian text. Visual transformation is a display-time-only concern.
 
+## Persian vs. Arabic keyboard input
+
+Persian and Arabic keyboard layouts encode some visually identical letters
+with **different code points**: an Arabic layout types ي (U+064A) / ك (U+0643)
+where a Persian layout types ی (U+06CC) / ک (U+06A9). Digits may arrive as
+Persian (۰-۹), Arabic-Indic (٠-٩) or ASCII (0-9). `fa_console` handles this
+at two levels:
+
+- **Display** — the shaping tables cover *both* letter variants, and the
+  reorder engine treats all three digit styles (plus the separators
+  `٫` `٬` and a `.`/`,` between digits, per UAX #9 rule W4) as one
+  left-to-right number run. Text typed on any layout renders correctly
+  with no extra code.
+- **Data** — at the string level `"ی" != "ي"`, which silently breaks
+  comparisons, `dict` keys and database searches across layouts.
+  `fa_normalize()` folds the Arabic forms onto their Persian equivalents;
+  letters with a genuinely distinct meaning (e.g. ة vs ه) are never touched.
+
+```python
+from fa_console import fa_normalize
+
+fa_normalize("كتاب يخ")                       # -> 'کتاب یخ'
+fa_normalize("سال ٢٠٢٦", digits="persian")    # -> 'سال ۲۰۲۶'
+fa_normalize("۲۰۲۶", digits="ascii")          # -> '2026'
+fa_normalize("۲۰۲۶", digits="arabic")         # -> '٢٠٢٦'
+
+name = fa_input("نام: ", normalize=True)      # fold while reading input
+```
+
+`fa_normalize` is a pure 1:1 code-point fold — string length is always
+preserved — and it is entirely optional: the display transform works
+without it.
+
 ## API overview
 
 | Member | Purpose |
 |--------|---------|
 | `setup_console(force=False)` | Apply the full configuration; idempotent. Returns a `ConsoleSetupReport` |
 | `fa_print(*args, **kwargs)` | Persian-safe drop-in for `print()` |
-| `fa_input(prompt="")` | Persian-safe `input()` with live correct echo |
+| `fa_input(prompt="", normalize=False)` | Persian-safe `input()` with live correct echo; `normalize=True` folds Arabic ي/ك onto ی/ک |
+| `fa_normalize(text, digits="keep")` | Fold Arabic lookalike letters (ي/ك → ی/ک); optionally unify digit styles (`"keep"` / `"persian"` / `"arabic"` / `"ascii"`) |
 | `is_visual_mode()` | `True` when the display transform is active |
 | `get_console_info()` | Dict snapshot of the detected environment (great for bug reports) |
 | `VisualStream` | The transparent stream wrapper (advanced use) |
@@ -118,9 +156,11 @@ terminal type, active bidi backend and a rendered sample.
 2. **Rendering layer** — on classic `conhost` only, a `VisualStream` wrapper is
    installed on stdout/stderr. Each write is converted: Arabic/Persian letters
    are replaced by their contextual presentation forms (isolated / initial /
-   medial / final, including پ چ ژ ک گ ی), then the line is reordered for an
-   LTR-drawing terminal while Latin words and numbers stay upright and brackets
-   are mirrored.
+   medial / final, covering the Persian and Arabic variants of every shared
+   letter, including پ چ ژ ک گ ی and ي ك), then the line is reordered for an
+   LTR-drawing terminal while Latin words and numbers stay upright and
+   brackets are mirrored. Numeric separators keep number runs unbroken
+   (`۱۲٫۵`, `1,000`, `10.5`).
 3. **Detection** — the transform engages only when stdout is an interactive
    classic console. Windows Terminal (`WT_SESSION`), VS Code terminals
    (`TERM_PROGRAM`) and redirected output are bypassed, because they render
@@ -159,6 +199,11 @@ terminal type, active bidi backend and a rendered sample.
   `FA_CONSOLE_NO_VISUAL=1` if you ever need to switch it off).
 - **Other RTL languages?** The shaping tables cover Arabic and Persian letters;
   the engine is language-agnostic for the letters it knows.
+- **My users mix Arabic and Persian keyboards.** Rendering is safe on both —
+  the shaping tables include ي/ك alongside ی/ک, and digits of any style stay
+  intact. For comparisons and storage, pass `normalize=True` to `fa_input()`
+  or call `fa_normalize()` on values before hashing/searching, so a word
+  typed on either layout yields the same string.
 
 ## Development
 

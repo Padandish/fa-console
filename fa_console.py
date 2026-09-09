@@ -7,7 +7,7 @@ fa_console — Correct Persian (Farsi) console I/O for Python on Windows
 :Social:     Bale https://ble.ir/TechInsightsHub
              Eitaa https://eitaa.com/TechInsightsHub
              Aparat https://aparat.com/TechInsightsHub
-:Version:    2.0.0
+:Version:    2.1.0
 :Platform:   Windows (fully functional) / POSIX (safe no-op)
 :Requires:   Python 3.8+
 
@@ -45,6 +45,19 @@ maximum fidelity; otherwise a built-in, dependency-free engine is used.
 :func:`fa_input` additionally provides a single-line editor with *live*
 correct echo while typing.
 
+**Persian vs. Arabic variants.** Persian and Arabic keyboard layouts
+encode some visually identical letters with *different* code points: an
+Arabic layout types ي (U+064A) / ك (U+0643) where a Persian layout types
+ی (U+06CC) / ک (U+06A9), and digits may arrive as Persian (۰-۹),
+Arabic-Indic (٠-٩) or ASCII (0-9). The shaping tables cover *both*
+letter variants and the reorder engine treats all three digit styles —
+plus the Arabic decimal (٫) and thousands (٬) separators — as
+left-to-right number runs, so text typed on any layout renders
+correctly. For data-level operations (comparison, ``dict`` keys,
+database search) :func:`fa_normalize` optionally folds the Arabic
+lookalikes onto their Persian canonical forms and, on request, unifies
+digit styles.
+
 Quick start
 -----------
 
@@ -52,14 +65,15 @@ Fix everything in one line::
 
     import fa_console                 # configuration applied on import
     print("سلام دنیا")                # renders correctly everywhere
-    name = fa_console.fa_input("نام: ")
+    name = fa_console.fa_input("نام: ", normalize=True)
 
 Explicit API::
 
-    from fa_console import setup_console, fa_print, fa_input
+    from fa_console import setup_console, fa_print, fa_input, fa_normalize
     report = setup_console()          # idempotent; force=True to redo
     fa_print("سلام", name)
-    name = fa_input("نام: ")
+    name = fa_input("نام: ", normalize=True)   # folds Arabic ي/ك onto ی/ک
+    clean = fa_normalize(text)                 # same fold for arbitrary text
 
 Programmatic inspection::
 
@@ -119,7 +133,7 @@ Module layout
 7. :class:`VisualStream` — transparent stdout/stderr wrapper
 8. :class:`_ConhostLineEditor` — live-echo line input
 9. Public API: :func:`setup_console`, :func:`fa_print`, :func:`fa_input`,
-   :func:`is_visual_mode`, :func:`get_console_info`
+   :func:`fa_normalize`, :func:`is_visual_mode`, :func:`get_console_info`
 10. Import-time auto-setup and script-mode diagnostics
 """
 
@@ -138,7 +152,7 @@ from typing import Any, Iterator
 
 __author__ = "Alireza Hosseini"
 __email__ = "alireza.hosseini@hotmail.com"
-__version__ = "2.0.2"
+__version__ = "2.1.0"
 
 __all__ = [
     "FaConsoleError",
@@ -147,6 +161,7 @@ __all__ = [
     "setup_console",
     "fa_print",
     "fa_input",
+    "fa_normalize",
     "is_visual_mode",
     "get_console_info",
 ]
@@ -229,6 +244,11 @@ ENV_NO_VISUAL = "FA_CONSOLE_NO_VISUAL"
 # required for Persian (پ چ ژ ک گ ی). Values are Unicode Arabic Presentation
 # Forms code points: (isolated, final, initial, medial).
 #
+# Both keyboard variants of every shared letter are listed explicitly:
+# the Persian forms ی (0x06CC) / ک (0x06A9) *and* their Arabic-layout
+# counterparts ي (0x064A) / ك (0x0643), so text typed on either layout
+# is shaped correctly.
+#
 # ``_DUAL_FORMS``  — letters that connect on both sides.
 # ``_RIGHT_FORMS`` — letters that only connect to the *preceding* letter.
 
@@ -250,17 +270,17 @@ _DUAL_FORMS: dict[int, tuple[int, int, int, int]] = {
     0x063A: (0xFECD, 0xFECE, 0xFECF, 0xFED0),  # غ
     0x0641: (0xFED1, 0xFED2, 0xFED3, 0xFED4),  # ف
     0x0642: (0xFED5, 0xFED6, 0xFED7, 0xFED8),  # ق
-    0x0643: (0xFED9, 0xFEDA, 0xFEDB, 0xFEDC),  # ك
+    0x0643: (0xFED9, 0xFEDA, 0xFEDB, 0xFEDC),  # ك (ARABIC KAF — Arabic layout)
     0x0644: (0xFEDD, 0xFEDE, 0xFEDF, 0xFEE0),  # ل
     0x0645: (0xFEE1, 0xFEE2, 0xFEE3, 0xFEE4),  # م
     0x0646: (0xFEE5, 0xFEE6, 0xFEE7, 0xFEE8),  # ن
     0x0647: (0xFEE9, 0xFEEA, 0xFEEB, 0xFEEC),  # ه
-    0x064A: (0xFEF1, 0xFEF2, 0xFEF3, 0xFEF4),  # ي
+    0x064A: (0xFEF1, 0xFEF2, 0xFEF3, 0xFEF4),  # ي (ARABIC YEH — Arabic layout)
     0x067E: (0xFB56, 0xFB57, 0xFB58, 0xFB59),  # پ
     0x0686: (0xFB7A, 0xFB7B, 0xFB7C, 0xFB7D),  # چ
-    0x06A9: (0xFB8E, 0xFB8F, 0xFB90, 0xFB91),  # ک
+    0x06A9: (0xFB8E, 0xFB8F, 0xFB90, 0xFB91),  # ک (KEHEH — Persian layout)
     0x06AF: (0xFB92, 0xFB93, 0xFB94, 0xFB95),  # گ
-    0x06CC: (0xFBFC, 0xFBFD, 0xFBFE, 0xFBFF),  # ی
+    0x06CC: (0xFBFC, 0xFBFD, 0xFBFE, 0xFBFF),  # ی (FARSI YEH — Persian layout)
 }
 
 _RIGHT_FORMS: dict[int, tuple[int, int | None]] = {
@@ -298,9 +318,70 @@ _RTL_RANGES = (
     (0xFE70, 0xFEFF),
 )
 
-#: Arabic-Indic and Persian digits. They live inside an RTL block but flow
-#: left-to-right as a number, so they are treated as LTR tokens.
+#: Arabic-Indic (٠-٩) and Persian (۰-۹) digits. They live inside an RTL
+#: block but flow left-to-right as a number, so they are treated as LTR
+#: tokens — whichever keyboard layout produced them.
 _ARABIC_DIGITS = frozenset(range(0x0660, 0x066A)) | frozenset(range(0x06F0, 0x06FA))
+
+#: Arabic decimal separator (٫ U+066B) and Arabic thousands separator
+#: (٬ U+066C). They are not alphanumeric, but they belong *inside* a
+#: number run: treating them as neutral RTL punctuation would split and
+#: reorder values such as ``۱۲٫۵`` or ``۱٬۰۰۰`` around the separator.
+_DIGIT_SEPARATORS = frozenset({0x066B, 0x066C})
+
+#: Letter pairs that Persian and Arabic keyboard layouts encode with
+#: different code points while looking identical and meaning the same.
+#: :func:`fa_normalize` maps left → right so data typed on either layout
+#: compares, hashes and stores identically. Letters with a genuinely
+#: distinct meaning (e.g. ة vs ه) are deliberately NOT folded — mapping
+#: them would silently change the text.
+_ARABIC_TO_PERSIAN_LETTERS: dict[int, int] = {
+    0x064A: 0x06CC,  # ARABIC LETTER YEH (ي) -> FARSI YEH (ی)
+    0x0643: 0x06A9,  # ARABIC LETTER KAF (ك) -> KEHEH (ک)
+}
+
+#: Digit styles understood by :func:`fa_normalize`. Index ``i`` of each
+#: string is the digit ``i`` in that style.
+_ASCII_DIGIT_RUN = "0123456789"
+_ARABIC_DIGIT_RUN = "٠١٢٣٤٥٦٧٨٩"   # U+0660 .. U+0669
+_PERSIAN_DIGIT_RUN = "۰۱۲۳۴۵۶۷۸۹"  # U+06F0 .. U+06F9
+
+#: Translation tables backing :func:`fa_normalize`, pre-built once per
+#: requested digit style. Every table always folds the Arabic lookalike
+#: letters; digits are rewritten only when a target style is requested.
+_NORMALIZE_TABLES: dict[str, dict[int, str]] = {}
+
+
+def _build_normalize_table(digits: str) -> dict[int, str]:
+    """Build one ``str.translate`` table for :func:`fa_normalize`."""
+    table: dict[int, str] = {
+        code: chr(target) for code, target in _ARABIC_TO_PERSIAN_LETTERS.items()
+    }
+    if digits == "keep":
+        return table
+    runs = {
+        "persian": _PERSIAN_DIGIT_RUN,
+        "arabic": _ARABIC_DIGIT_RUN,
+        "ascii": _ASCII_DIGIT_RUN,
+    }
+    target_run = runs[digits]
+    for i in range(10):
+        table[ord(_ASCII_DIGIT_RUN[i])] = target_run[i]
+        table[ord(_ARABIC_DIGIT_RUN[i])] = target_run[i]
+        table[ord(_PERSIAN_DIGIT_RUN[i])] = target_run[i]
+    return table
+
+
+for _style in ("keep", "persian", "arabic", "ascii"):
+    _NORMALIZE_TABLES[_style] = _build_normalize_table(_style)
+del _style
+
+#: Every digit character in the three supported styles. Used to detect
+#: numeric separators — a ``.`` or ``,`` wedged between two digits counts
+#: as part of the number (UAX #9 rule W4) and stays inside the LTR run.
+_ALL_DIGIT_CHARS = frozenset(
+    _ASCII_DIGIT_RUN + _ARABIC_DIGIT_RUN + _PERSIAN_DIGIT_RUN
+)
 
 #: Bracket mirroring applied during visual reordering (Unicode Bidi rule L4).
 _MIRROR = {"(": ")", ")": "(", "[": "]", "]": "[", "{": "}", "}": "{"}
@@ -515,11 +596,14 @@ def _has_rtl(text: str) -> bool:
 def _is_ltr_token(ch: str) -> bool:
     """
     ``True`` for characters that keep left-to-right order inside a number
-    or Latin word: ASCII alphanumerics, Persian/Arabic digits, etc.
+    or Latin word: ASCII alphanumerics, Persian/Arabic digits, and the
+    Arabic decimal/thousands separators (so ``۱۲٫۵`` and ``۱٬۰۰۰`` stay
+    one unbroken number run under reordering).
     """
-    if ord(ch) in _ARABIC_DIGITS:
+    code = ord(ch)
+    if code in _ARABIC_DIGITS or code in _DIGIT_SEPARATORS:
         return True
-    return ch.isalnum() and not _is_rtl_letter(ord(ch))
+    return ch.isalnum() and not _is_rtl_letter(code)
 
 
 class _VisualTransformer:
@@ -657,18 +741,34 @@ class _VisualTransformer:
         Reorder a shaped logical line for an LTR-drawing terminal: the RTL
         flow is reversed while maximal Latin/number runs stay upright and
         brackets are mirrored. Control characters pass through untouched.
+
+        Numeric separators keep their number runs unbroken: the Arabic
+        decimal/thousands separators (٫ ٬) always, and an ASCII ``.`` or
+        ``,` ` when it is wedged between two digits of any style (UAX #9
+        rule W4) — so ``12.5``, ``۱۰.۵``, ``۱۲٫۵`` and ``۱٬۰۰۰`` all stay
+        intact under reordering.
         """
         if not _has_rtl(line):
             return line
+        chars = list(line)
+        numeric_sep = {
+            i
+            for i, ch in enumerate(chars)
+            if ch in ".,"
+            and 0 < i < len(chars) - 1
+            and chars[i - 1] in _ALL_DIGIT_CHARS
+            and chars[i + 1] in _ALL_DIGIT_CHARS
+        }
         out: list[str] = []
         cluster: list[str] = []
-        for ch in reversed(line):
+        for i in range(len(chars) - 1, -1, -1):  # scan right-to-left
+            ch = chars[i]
             if ord(ch) < 32:  # control chars act as hard boundaries
                 if cluster:
                     out.extend(reversed(cluster))
                     cluster.clear()
                 out.append(ch)
-            elif _is_ltr_token(ch):
+            elif _is_ltr_token(ch) or i in numeric_sep:
                 cluster.append(ch)
             else:
                 if cluster:
@@ -1010,7 +1110,7 @@ def fa_print(*values: Any, sep: str = " ", end: str = "\n",
     print(*values, sep=sep, end=end, file=file, flush=flush)
 
 
-def fa_input(prompt: str = "") -> str:
+def fa_input(prompt: str = "", *, normalize: bool = False) -> str:
     """
     Persian-safe :func:`input` replacement.
 
@@ -1021,6 +1121,12 @@ def fa_input(prompt: str = "") -> str:
 
     Args:
         prompt: Prompt text in logical order; rendered correctly.
+        normalize: When ``True``, the returned string is passed through
+            :func:`fa_normalize` (digits kept as typed), so a word typed
+            with an Arabic layout (ي / ك) compares equal to the same word
+            typed with a Persian layout (ی / ک). The default ``False``
+            returns the text exactly as typed, preserving the logical
+            data invariant.
 
     Returns:
         The *logical-order* string typed by the user.
@@ -1029,21 +1135,73 @@ def fa_input(prompt: str = "") -> str:
         KeyboardInterrupt: on Ctrl+C.
         EOFError: on Ctrl+Z (interactive) or closed stdin (piped).
     """
+    result: str | None = None
     if _visual_mode and _is_windows() and sys.stdin is not None:
         try:
             if sys.stdin.isatty():
                 try:
-                    return _ConhostLineEditor(prompt).readline()
+                    result = _ConhostLineEditor(prompt).readline()
                 except (EOFError, KeyboardInterrupt):
                     raise
                 except Exception as exc:
                     logger.warning("line editor unavailable (%s); using input()", exc)
         except Exception:
             pass  # isatty probing failed — fall through to plain input()
-    if prompt:
-        # VisualStream (when installed) performs the display conversion.
-        print(prompt, end="", flush=True)
-    return input()
+    if result is None:
+        if prompt:
+            # VisualStream (when installed) performs the display conversion.
+            print(prompt, end="", flush=True)
+        result = input()
+    return fa_normalize(result) if normalize else result
+
+
+def fa_normalize(text: str, digits: str = "keep") -> str:
+    """
+    Fold Arabic lookalike characters onto their Persian canonical forms.
+
+    Persian and Arabic keyboard layouts encode some visually identical
+    letters with different code points: an Arabic layout types
+    ي (U+064A) / ك (U+0643) where a Persian layout types ی (U+06CC) /
+    ک (U+06A9). The display transform shapes both variants correctly,
+    but at the *data* level ``"ی" != "ي"``, which silently breaks string
+    comparison, ``dict`` keys and database searches when users mix
+    layouts. :func:`fa_normalize` folds the Arabic forms onto their
+    Persian equivalents so both keyboards yield the same string. Letters
+    with a genuinely distinct meaning (e.g. ة vs ه) are never touched.
+
+    Args:
+        text: Any string (typically user input).
+        digits: What to do with digits:
+
+            * ``"keep"`` — leave every digit style untouched (default);
+            * ``"persian"`` — rewrite ASCII (0-9), Arabic-Indic (٠-٩)
+              and Persian (۰-۹) digits as Persian digits;
+            * ``"arabic"`` — rewrite all styles as Arabic-Indic digits;
+            * ``"ascii"`` — rewrite all styles as ASCII digits.
+
+    Returns:
+        The normalized string. Length is always preserved: every mapping
+        is 1:1 at code-point level.
+
+    Raises:
+        ValueError: if *digits* is not one of the values above.
+
+    Example::
+
+        >>> fa_normalize("كتاب")            # Arabic Kaf -> Persian Kaf
+        'کتاب'
+        >>> fa_normalize("سال ٢٠٢٦", digits="persian")
+        'سال ۲۰۲۶'
+        >>> fa_normalize("۲۰۲۶", digits="ascii")
+        '2026'
+    """
+    table = _NORMALIZE_TABLES.get(digits)
+    if table is None:
+        raise ValueError(
+            "digits must be 'keep', 'persian', 'arabic' or 'ascii', "
+            f"got {digits!r}"
+        )
+    return text.translate(table)
 
 
 def is_visual_mode() -> bool:
@@ -1122,6 +1280,9 @@ def _self_diagnostics() -> None:
     sample = "سلام علی! سال ۱۴۰۵ — (test 123)"
     print(f"  logical sample : {sample}")
     print(f"  visual sample  : {_to_visual(sample)}")
+    mixed_sample = "كتاب يخ — سال ٢٠٢٦"  # Arabic-layout letters + Arabic-Indic digits
+    print(f"  mixed sample   : {mixed_sample}")
+    print(f"  normalized     : {fa_normalize(mixed_sample, digits='persian')}")
     print(line)
 
 
