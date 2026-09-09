@@ -8,6 +8,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/fa-console.svg)](https://pypi.org/project/fa-console/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OS](https://img.shields.io/badge/platform-Windows-blue.svg)](#compatibility)
+[![Tests](https://github.com/Padandish/fa-console/actions/workflows/tests.yml/badge.svg)](https://github.com/Padandish/fa-console/actions/workflows/tests.yml)
 
 `fa_console` makes Python's built-in `print()` and `input()` work correctly
 with Persian text on Windows — **automatically**, with zero required
@@ -141,11 +142,13 @@ without it.
 ### Self-diagnostics
 
 ```bash
-python fa_console.py
+python fa_console.py      # from a source checkout
+python -m fa_console      # from an installed (pip) package
 ```
 
 Prints a full environment report: encodings, console code page, detected
-terminal type, active bidi backend and a rendered sample.
+terminal type, active bidi backend and a rendered sample. Include this
+output when reporting issues.
 
 ## How it works
 
@@ -161,10 +164,11 @@ terminal type, active bidi backend and a rendered sample.
    LTR-drawing terminal while Latin words and numbers stay upright and
    brackets are mirrored. Numeric separators keep number runs unbroken
    (`۱۲٫۵`, `1,000`, `10.5`).
-3. **Detection** — the transform engages only when stdout is an interactive
-   classic console. Windows Terminal (`WT_SESSION`), VS Code terminals
-   (`TERM_PROGRAM`) and redirected output are bypassed, because they render
-   Arabic correctly or must receive standard logical text.
+3. **Detection** — the transform engages whenever stdout is an interactive
+   console without native Arabic support: classic `conhost` *and* the VS
+   Code integrated terminal. Windows Terminal (`WT_SESSION`) and redirected
+   output are bypassed — the former shapes Arabic itself, the latter must
+   receive standard logical text.
 
 ## Configuration
 
@@ -197,8 +201,12 @@ terminal type, active bidi backend and a rendered sample.
   limitation — this package compensates automatically by applying the same
   visual transform used for the classic console (see
   `FA_CONSOLE_NO_VISUAL=1` if you ever need to switch it off).
-- **Other RTL languages?** The shaping tables cover Arabic and Persian letters;
-  the engine is language-agnostic for the letters it knows.
+- **Using `colorama` or `tqdm`?** Those libraries wrap `sys.stdout` too.
+  Import `fa_console` **before** them, so their wrappers stack on top of
+  the visual stream instead of replacing it — colours keep working.
+- **Other RTL languages?** The shaping tables cover Arabic, Persian and
+  Urdu/Pashto letters; the engine is language-agnostic for the letters it
+  knows.
 - **My users mix Arabic and Persian keyboards.** Rendering is safe on both —
   the shaping tables include ي/ك alongside ی/ک, and digits of any style stay
   intact. For comparisons and storage, pass `normalize=True` to `fa_input()`
@@ -210,8 +218,14 @@ terminal type, active bidi backend and a rendered sample.
 ```bash
 git clone https://github.com/Padandish/fa-console.git
 cd fa-console
-python -m pip install build
+python -m pip install build pytest
 python -m build          # creates dist/
+```
+
+Run the test suite:
+
+```bash
+python -m pytest tests -q
 ```
 
 Run the interactive example in any console:
@@ -223,7 +237,7 @@ python example.py
 Run the full environment diagnostics:
 
 ```bash
-python fa_console.py
+python fa_console.py     # or: python -m fa_console
 ```
 
 ## Author

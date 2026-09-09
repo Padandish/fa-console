@@ -8,6 +8,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/fa-console.svg)](https://pypi.org/project/fa-console/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OS](https://img.shields.io/badge/platform-Windows-blue.svg)](#سازگاری)
+[![Tests](https://github.com/Padandish/fa-console/actions/workflows/tests.yml/badge.svg)](https://github.com/Padandish/fa-console/actions/workflows/tests.yml)
 
 `fa_console` کارکردن `print()` و `input()` پایتون با متن فارسی را در ویندوز
 **خودکار** درست می‌کند — بدون وابستگی اجباری و بدون تغییر در کد شما؛ فقط یک
@@ -132,11 +133,12 @@ name = fa_input("نام: ", normalize=True)      # یکسان‌سازی هنگ�
 ### عیب‌یاب خودکار
 
 ```bash
-python fa_console.py
+python fa_console.py      # از روی سورس
+python -m fa_console      # از نصب pip
 ```
 
 گزارش کامل محیط را چاپ می‌کند: انکودینگ‌ها، کدپیج کنسول، نوع ترمینال تشخیص‌داده‌شده،
-موتور فعال و یک نمونه‌ی نمایشی.
+موتور فعال و یک نمونه‌ی نمایشی. هنگام گزارش مشکل، خروجی همین دستور را ضمیمه کنید.
 
 ## چطور کار می‌کند؟
 
@@ -149,10 +151,10 @@ python fa_console.py
    شامل پ چ ژ ک گ ی و همچنین ي ك) تبدیل و سپس سطر برای ترمینالِ چپ‌به‌راست
    بازچینی می‌شود؛ کلمات لاتین و اعداد صاف می‌مانند و پرانتزها آینه می‌شوند.
    جداکننده‌های عددی رشتهٔ عدد را نمی‌شکنند (`۱۲٫۵`، `1,000`، `10.5`).
-3. **تشخیص** — تبدیل فقط وقتی فعال می‌شود که خروجی، کنسول تعاملی کلاسیک باشد.
-   Windows Terminal (`WT_SESSION`)، ترمینال VS Code (`TERM_PROGRAM`) و خروجی
-   ریدایرکت‌شده کنار گذاشته می‌شوند، چون خودشان درست نمایش می‌دهند یا باید متن
-   استاندارد بگیرند.
+3. **تشخیص** — تبدیل هر جا فعال می‌شود که خروجی، کنسول تعاملیِ فاقد پشتیبانی عربی
+   باشد: conhost کلاسیک **و** ترمینال VS Code. Windows Terminal (`WT_SESSION`) و
+   خروجی ریدایرکت‌شده کنار گذاشته می‌شوند — اولی خودش عربی را درست می‌چیند و دومی
+   باید متن منطقی استاندارد بگیرد.
 
 ## پیکربندی
 
@@ -184,8 +186,11 @@ python fa_console.py
 - **فارسی در ترمینال VS Code خراب دیده می‌شود.** این محدودیت xterm.js است و همین
   پکیج به‌صورت خودکار جبرانش می‌کند: همان تبدیل نمایشیِ کنسول کلاسیک در VS Code
   هم اعمال می‌شود (در صورت نیاز: `FA_CONSOLE_NO_VISUAL=1`).
-- **زبان‌های دیگر راست‌به‌چپ؟** جدول‌های شکل‌دهی حروف عربی و فارسی را پوشش می‌دهند
-  و موتور برای حروف شناخته‌شده، مستقل از زبان است.
+- **از colorama یا tqdm استفاده می‌کنید؟** این کتابخانه‌ها هم `sys.stdout` را
+  می‌پوشانند. `fa_console` را **قبل از** آن‌ها import کنید تا پوشش‌شان روی استریم
+  دیداری بیاید و رنگ‌ها سالم بمانند.
+- **زبان‌های دیگر راست‌به‌چپ؟** جدول‌های شکل‌دهی حروف عربی، فارسی و اردو/پشتو
+  (ٹ ڈ ڑ ں ھ ہ ے) را پوشش می‌دهند و موتور برای حروف شناخته‌شده، مستقل از زبان است.
 - **کاربرانم کیبورد فارسی و عربی را قاطی می‌کنند.** نمایش در هر دو حالت امن است —
   جدول‌های شکل‌دهی ي/ك را در کنار ی/ک دارند و اعداد با هر سبکی سالم می‌مانند.
   برای مقایسه و ذخیره‌سازی، `normalize=True` به `fa_input()` بدهید یا قبل از هش/جستجو
@@ -196,8 +201,14 @@ python fa_console.py
 ```bash
 git clone https://github.com/Padandish/fa-console.git
 cd fa-console
-python -m pip install build
+python -m pip install build pytest
 python -m build          # ساخت dist/
+```
+
+اجرای مجموعه تست:
+
+```bash
+python -m pytest tests -q
 ```
 
 اجرای مثال تعاملی در هر کنسولی:
@@ -209,7 +220,7 @@ python example.py
 اجرای گزارش کامل محیط:
 
 ```bash
-python fa_console.py
+python fa_console.py     # یا: python -m fa_console
 ```
 
 ## نویسنده

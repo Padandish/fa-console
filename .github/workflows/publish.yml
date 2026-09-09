@@ -19,7 +19,23 @@ on:
   workflow_dispatch: {}      # allows manual runs from the Actions tab
 
 jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: python -m pip install --upgrade pytest
+
+      - name: Run tests
+        run: python -m pytest tests -q
+
   publish:
+    needs: test              # never upload a release whose tests fail
     runs-on: ubuntu-latest
     environment: pypi
     permissions:

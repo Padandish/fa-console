@@ -5,6 +5,33 @@ All notable changes to **fa-console** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-09-09
+
+### Added
+
+- **Built-in engine: lam-alef ligatures.** لام + alef (ا أ إ آ) now fuse
+  into the single ligature glyph (FEFB/FEFC family) with the correct
+  isolated/final form, matching professional shaping instead of drawing
+  two separate letters.
+- **Built-in engine: Urdu/Pashto letter support** — ٹ ھ (dual-joining)
+  and ڈ ڑ ں ۀ ہ ے (right-joining), extending shaping coverage beyond
+  Persian/Arabic.
+- **Automated test suite** (pytest) covering the shaping goldens,
+  lam-alef ligatures, UAX #9 W4 numeric-separator behaviour, terminal
+  detection in all environment combinations, `fa_normalize`, and
+  `VisualStream` — plus a GitHub Actions test matrix (Windows,
+  Python 3.8 → 3.14). The publish workflow now runs the tests before
+  uploading.
+- `MANIFEST.in` — tests and docs are included in the source
+  distribution.
+
+### Changed
+
+- License metadata migrated to PEP 639 SPDX form (`license = "MIT"`,
+  `license-files`), dropping the deprecated trove classifier.
+- Docs: documented `python -m fa_console` diagnostics and the required
+  import order with `colorama`/`tqdm` (import `fa_console` first).
+
 ## [2.1.0] - 2026-09-09
 
 ### Added
@@ -96,6 +123,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   untouched; fail-open design (internal failures never crash the host).
 - Linux/macOS: safe no-op. Python 3.8+, zero required dependencies.
 
+[2.2.0]: https://github.com/Padandish/fa-console/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/Padandish/fa-console/compare/v2.0.2...v2.1.0
 [2.0.2]: https://github.com/Padandish/fa-console/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/Padandish/fa-console/compare/v2.0.0...v2.0.1

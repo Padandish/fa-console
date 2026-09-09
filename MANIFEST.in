@@ -1,0 +1,4 @@
+include CHANGELOG.md
+include README.fa.md
+include LICENSE
+recursive-include tests *.py

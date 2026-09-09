@@ -120,6 +120,9 @@ Scope and limitations
 * Not thread-safe beyond normal stream usage: the module mutates
   ``sys.stdin``/``sys.stdout`` once at import, which is standard practice;
   the console editor is inherently single-threaded.
+* Interop: libraries that re-wrap ``sys.stdout`` (``colorama``, ``tqdm``,
+  progress bars, …) must be imported *after* this module, so their
+  wrappers stack on top of the visual stream instead of replacing it.
 
 Module layout
 -------------
@@ -152,7 +155,7 @@ from typing import Any, Iterator
 
 __author__ = "Alireza Hosseini"
 __email__ = "alireza.hosseini@hotmail.com"
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 
 __all__ = [
     "FaConsoleError",
@@ -281,6 +284,8 @@ _DUAL_FORMS: dict[int, tuple[int, int, int, int]] = {
     0x06A9: (0xFB8E, 0xFB8F, 0xFB90, 0xFB91),  # ک (KEHEH — Persian layout)
     0x06AF: (0xFB92, 0xFB93, 0xFB94, 0xFB95),  # گ
     0x06CC: (0xFBFC, 0xFBFD, 0xFBFE, 0xFBFF),  # ی (FARSI YEH — Persian layout)
+    0x0679: (0xFB66, 0xFB67, 0xFB68, 0xFB69),  # ٹ  TTEH (Urdu)
+    0x06BE: (0xFBAA, 0xFBAB, 0xFBAC, 0xFBAD),  # ھ  HEH DOACHASHMEE (Urdu/Pashto)
 }
 
 _RIGHT_FORMS: dict[int, tuple[int, int | None]] = {
@@ -298,7 +303,26 @@ _RIGHT_FORMS: dict[int, tuple[int, int | None]] = {
     0x0648: (0xFEED, 0xFEEE),  # و
     0x0649: (0xFEEF, 0xFEF0),  # ى
     0x0698: (0xFB8A, 0xFB8B),  # ژ
+    0x0688: (0xFB88, 0xFB89),  # ڈ  DDAAL (Urdu)
+    0x0691: (0xFB8C, 0xFB8D),  # ڑ  RRE (Urdu)
+    0x06BA: (0xFB9E, 0xFB9F),  # ں  NOON GHUNNA (Urdu)
+    0x06C0: (0xFBA4, 0xFBA5),  # ۀ  HEH WITH YEH ABOVE
+    0x06C1: (0xFBA6, 0xFBA7),  # ہ  HEH GOAL (Urdu)
+    0x06D2: (0xFBAE, 0xFBAF),  # ے  YEH BARREE (Urdu)
 }
+
+#: Lam-Alef ligatures (لا لأ لإ لآ): key = the alef variant that follows
+#: لام, values = (isolated, final) — the final form is used when the lam
+#: itself joins to a preceding letter, the isolated form otherwise.
+_LAM_ALEF: dict[int, tuple[int, int]] = {
+    0x0622: (0xFEF5, 0xFEF6),  # آ
+    0x0623: (0xFEF7, 0xFEF8),  # أ
+    0x0625: (0xFEF9, 0xFEFA),  # إ
+    0x0627: (0xFEFB, 0xFEFC),  # ا
+}
+
+#: The letter lam (0x0644) — first half of the lam-alef ligature.
+_LAM = 0x0644
 
 #: Arabic tatweel/kashida — a dual-joining letter whose forms are itself.
 _TATWEEL = 0x0640
@@ -687,19 +711,26 @@ class _VisualTransformer:
         """
         Replace each Arabic/Persian letter with the presentation form
         (isolated / initial / medial / final) dictated by its joining
-        context. Non-Arabic characters and transparent marks pass through;
-        ZWNJ breaks joining and is removed from the output.
+        context, and fold every lam+alef pair into its single ligature
+        glyph (لا → FEFB/FEFC family). Non-Arabic characters and
+        transparent marks pass through; ZWNJ breaks joining and is removed
+        from the output.
         """
         if not _has_rtl(text):
             return text
         chars = list(text)
+        n = len(chars)
         out: list[str] = []
-        for i, ch in enumerate(chars):
+        i = 0
+        while i < n:
+            ch = chars[i]
             code = ord(ch)
             if code == _ZWNJ:
+                i += 1
                 continue
             if code in _TRANSPARENT:
                 out.append(ch)
+                i += 1
                 continue
             if code == _TATWEEL:
                 iso = fin = ini = med = ch
@@ -713,6 +744,7 @@ class _VisualTransformer:
                 joins_prev, joins_next = True, False
             else:
                 out.append(ch)
+                i += 1
                 continue
 
             prev = self._effective(chars, i, -1)
@@ -724,6 +756,14 @@ class _VisualTransformer:
                 nxt in _DUAL_FORMS or nxt in _RIGHT_FORMS or nxt == _TATWEEL
             )
 
+            if code == _LAM and isinstance(nxt, int) and nxt in _LAM_ALEF:
+                # ل + alef always fuses into one ligature glyph; the form
+                # depends only on whether the lam connects backwards.
+                iso, fin = _LAM_ALEF[nxt]
+                out.append(chr(fin if prev_dual else iso))
+                i += 2  # the alef is consumed by the ligature
+                continue
+
             if prev_dual and joins_next and nxt_joins and med is not None:
                 out.append(chr(med))
             elif prev_dual and joins_prev and fin is not None:
@@ -732,6 +772,7 @@ class _VisualTransformer:
                 out.append(chr(ini))
             else:
                 out.append(chr(iso))
+            i += 1
         return "".join(out)
 
     # -- bidirectional line reorder ---------------------------------------------
